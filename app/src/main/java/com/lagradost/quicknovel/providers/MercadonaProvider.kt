@@ -435,22 +435,56 @@ class MercadonaProvider : MainAPI() {
         orderBy: String?,
         tag: String?
     ): HeadMainPageResponse {
+        // Si no hay categoría seleccionada, usamos la primera ("Novedades") por defecto.
+        val targetCategoryId = mainCategory ?: categoryGroups.firstOrNull()?.id
+
+        // Mercadona no pagina estos listados: cada petición trae siempre el catálogo
+        // completo de la categoría/sección. Sin este corte, el scroll infinito seguiría
+        // pidiendo "más páginas" y recibiría una y otra vez los mismos productos.
+        if (page > 1) {
+            return HeadMainPageResponse(targetCategoryId ?: "", emptyList())
+        }
+
         return coroutineScope {
-            // Si no hay categoría seleccionada, usamos la primera ("Novedades") por defecto.
-            val targetCategoryId = mainCategory ?: categoryGroups.firstOrNull()?.id
-            
             val subCats = categorySubCategories[targetCategoryId] ?: emptyList()
-            
+
             // Si es una de las secciones especiales (Novedades/Descuentos), no tiene subcategorías reales.
             val isSpecial = targetCategoryId == "new-arrivals" || targetCategoryId == "price-drops"
-            
+
             val results = if (isSpecial) {
-                fetchCategoryProducts(targetCategoryId!!)
+                // Estas no tienen subcategorías, pero para que se vean igual que el resto
+                // (con su título antes de la cuadrícula) usamos el propio nombre de la
+                // categoría grande ("Novedades" / "Descuentos") como divisor.
+                val catId = targetCategoryId!!
+                val products = fetchCategoryProducts(catId)
+                if (products.isNotEmpty()) {
+                    val sectionName = categoryGroups.find { it.id == catId }?.name ?: catId
+                    listOf(
+                        newSearchResponse(sectionName, "#divider-$catId") { isSectionDivider = true }
+                    ) + products
+                } else {
+                    products
+                }
             } else {
-                // Lanzamos peticiones en paralelo para todas las subcategorías de esta sección grande.
-                subCats.map { (_, subId) ->
+                // Lanzamos peticiones en paralelo para todas las subcategorías de esta sección
+                // grande, e intercalamos un título divisorio con el nombre de cada una que
+                // tenga productos (así se ve igual que en la web/app de Mercadona).
+                val productsPerSubCategory = subCats.map { (_, subId) ->
                     async { fetchCategoryProducts(subId) }
-                }.awaitAll().flatten()
+                }.awaitAll()
+
+                val list = mutableListOf<SearchResponse>()
+                val seenIds = mutableSetOf<String>()
+                subCats.forEachIndexed { index, (subName, subId) ->
+                    val newProducts = productsPerSubCategory[index].filter { seenIds.add(it.url) }
+                    if (newProducts.isNotEmpty()) {
+                        list.add(
+                            newSearchResponse(subName, "#divider-$subId") { isSectionDivider = true }
+                        )
+                        list.addAll(newProducts)
+                    }
+                }
+                list
             }
 
             HeadMainPageResponse(targetCategoryId ?: "", results)
@@ -458,7 +492,15 @@ class MercadonaProvider : MainAPI() {
     }
 
     private suspend fun fetchCategoryProducts(categoryId: String): List<SearchResponse> {
-        val url = "https://tienda.mercadona.es/api/categories/$categoryId/"
+        // NOVEDADES y DESCUENTOS son módulos de la portada (home), no categorías reales,
+        // y viven bajo /api/home/<slug>/ en vez de /api/categories/<id>/.
+        val isSpecial = categoryId == "new-arrivals" || categoryId == "price-drops"
+        val url = if (isSpecial) {
+            "https://tienda.mercadona.es/api/home/$categoryId/"
+        } else {
+            "https://tienda.mercadona.es/api/categories/$categoryId/"
+        }
+
         return try {
             val res = app.get(url, headers = headers)
             if (res.code != 200) return emptyList()
@@ -467,19 +509,26 @@ class MercadonaProvider : MainAPI() {
             val list = mutableListOf<SearchResponse>()
             val seenIds = mutableSetOf<String>()
 
-            // La estructura de Mercadona tiene "categories" -> "products"
-            root.path("categories").forEach { subCat ->
-                subCat.path("products").forEach { product ->
+            if (isSpecial) {
+                // La respuesta de /api/home/<slug>/ trae los productos en "items".
+                root.path("items").forEach { product ->
                     parseProductNode(product, seenIds)?.let { list.add(it) }
                 }
-            }
-            // Si no hay el nesting anterior (ej: secciones especiales), los productos pueden estar directos.
-            if (list.isEmpty()) {
-                root.path("products").forEach { product ->
-                    parseProductNode(product, seenIds)?.let { list.add(it) }
+            } else {
+                // La estructura de Mercadona tiene "categories" -> "products"
+                root.path("categories").forEach { subCat ->
+                    subCat.path("products").forEach { product ->
+                        parseProductNode(product, seenIds)?.let { list.add(it) }
+                    }
+                }
+                // Si no hay el nesting anterior, los productos pueden estar directos.
+                if (list.isEmpty()) {
+                    root.path("products").forEach { product ->
+                        parseProductNode(product, seenIds)?.let { list.add(it) }
+                    }
                 }
             }
-            
+
             list
         } catch (e: Exception) {
             logError(e)
