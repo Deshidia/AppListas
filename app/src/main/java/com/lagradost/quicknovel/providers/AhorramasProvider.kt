@@ -19,14 +19,19 @@ import kotlin.math.roundToInt
  * "Wishlist-AddProduct" que aparecen en las URLs internas de la web). Por eso aquí se hace
  * scraping con Jsoup en vez de leer JSON.
  *
- * Como no se ha podido inspeccionar el HTML "en crudo" de la web (herramientas de solo
- * lectura), el parseo de cada ficha de producto se apoya en señales robustas que no
- * dependen de nombres de clase CSS concretos (que Ahorramas podría cambiar en cualquier
- * momento): el atributo alt de la imagen del producto para el nombre, el propio enlace del
- * producto (siempre termina en "-<id>.html") para la URL, y una detección de precio tachado
- * (a través de <s>/<del>/.strike-through) para diferenciar precio actual y precio anterior.
- * Si en algún momento algo deja de encajar, conviene revisar esas heurísticas contra el HTML
- * real de la web.
+ * El parseo de cada ficha de producto se apoya en señales robustas que no dependen de
+ * nombres de clase CSS concretos (que Ahorramas podría cambiar en cualquier momento): el
+ * atributo alt de la imagen del producto para el nombre, el propio enlace del producto
+ * (siempre termina en "-<id>.html") para la URL, y una detección de precio tachado (a
+ * través de <s>/<del>/.strike-through) para diferenciar precio actual y precio anterior.
+ *
+ * Comprobado contra el HTML real de varias páginas de categoría, buscador y ficha de
+ * producto (septiembre 2026). Un detalle importante encontrado entonces: en los productos
+ * que se venden a peso variable, la ficha antepone a la foto real un icono decorativo
+ * "PESO VARIABLE" que también es una etiqueta <img>; por eso la imagen y el nombre del
+ * producto se buscan dentro del propio enlace al producto y no con el primer <img> de toda
+ * la ficha (ver comentario en parseProductTile). Si en algún momento algo deja de encajar,
+ * conviene revisar estas heurísticas contra el HTML real de la web.
  */
 class AhorramasProvider : MainAPI() {
     override val name = "Ahorramas"
@@ -382,10 +387,26 @@ class AhorramasProvider : MainAPI() {
         val href = fixUrl(link.attr("href"))
         if (!seenIds.add(href)) return null
 
-        val img = tile.selectFirst("img")
+        // En las fichas de productos que se venden a peso variable (carne, pescado, fruta...),
+        // Ahorramas antepone a la foto real un icono decorativo "PESO VARIABLE"
+        // (.../images/weight.svg) que también es un <img>. Si se coge sin más el primer <img>
+        // de toda la ficha (tile.selectFirst("img")), ese icono se cuela como si fuera la foto
+        // del producto y su alt ("PESO VARIABLE") como si fuera el nombre: de ahí que algunas
+        // fichas aparecieran con una imagen y un texto que no se correspondían con el producto.
+        // La foto real, en cambio, siempre está anidada dentro del propio enlace al producto
+        // (el mismo <a> ya localizado arriba por su URL), así que se busca ahí primero. Solo si
+        // ese enlace no tuviera ninguna imagen se cae a buscar en toda la ficha, descartando
+        // explícitamente ese icono por si acaso.
+        val img = link.selectFirst("img")
+            ?: tile.select("img").firstOrNull { candidate ->
+                val alt = candidate.attr("alt").trim()
+                !alt.equals("PESO VARIABLE", ignoreCase = true) &&
+                        !candidate.attr("src").contains("weight.svg", ignoreCase = true)
+            }
+
         val name = img?.attr("alt")?.trim()?.takeIf { it.isNotEmpty() }
-            ?: link.text().trim().takeIf { it.isNotEmpty() }
             ?: tile.selectFirst("h2, h3, .pdp-link, .link")?.text()?.trim()?.takeIf { it.isNotEmpty() }
+            ?: link.text().trim().takeIf { it.isNotEmpty() }
             ?: return null
 
         val thumb = img?.attr("abs:src")?.takeIf { it.isNotEmpty() }
