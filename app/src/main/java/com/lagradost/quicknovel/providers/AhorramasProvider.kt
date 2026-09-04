@@ -39,7 +39,7 @@ class AhorramasProvider : MainAPI() {
     override val lang = "es"
     override val hasMainPage = true
     override val iconId = R.drawable.ic_ahorramas
-    override val iconBackgroundId = R.color.white
+    override val iconBackgroundId = R.color.ahorramasColor
 
     private val headers = mapOf(
         "Accept-Language" to "es-ES,es;q=0.9",
