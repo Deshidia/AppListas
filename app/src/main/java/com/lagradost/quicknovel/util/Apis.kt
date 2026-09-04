@@ -10,125 +10,14 @@ import com.lagradost.quicknovel.R
 import com.lagradost.quicknovel.SearchResponse
 import com.lagradost.quicknovel.StreamResponse
 import com.lagradost.quicknovel.providers.AhorramasProvider
-import com.lagradost.quicknovel.providers.AllNovelProvider
-import com.lagradost.quicknovel.providers.AnnasArchive
-import com.lagradost.quicknovel.providers.DevilNovelsProvider
-import com.lagradost.quicknovel.providers.ChrysanthemumGardenProvider
-import com.lagradost.quicknovel.providers.FanMtlnProvider
-import com.lagradost.quicknovel.providers.FenrirRealProvider
-import com.lagradost.quicknovel.providers.FreewebnovelProvider
-import com.lagradost.quicknovel.providers.GraycityProvider
-import com.lagradost.quicknovel.providers.HiraethTranslationProvider
-import com.lagradost.quicknovel.providers.IndoWebNovelProvider
-import com.lagradost.quicknovel.providers.LnoriProvider
-import com.lagradost.quicknovel.providers.KolNovelProvider
-import com.lagradost.quicknovel.providers.LibReadProvider
-import com.lagradost.quicknovel.providers.LightNovelTranslationsProvider
-import com.lagradost.quicknovel.providers.LightNovelWorldProvider
-import com.lagradost.quicknovel.providers.LnMTLProvider
-import com.lagradost.quicknovel.providers.MeioNovelProvider
 import com.lagradost.quicknovel.providers.MercadonaProvider
-import com.lagradost.quicknovel.providers.MoreNovelProvider
-import com.lagradost.quicknovel.providers.MtlNovelProvider
-import com.lagradost.quicknovel.providers.NoBadNovelProvider
-import com.lagradost.quicknovel.providers.NovLoveProvider
-import com.lagradost.quicknovel.providers.NovelBinProvider
-import com.lagradost.quicknovel.providers.NovelBuddyProvider
-import com.lagradost.quicknovel.providers.NovelFireProvider
-import com.lagradost.quicknovel.providers.NovelFullNETProvider
-import com.lagradost.quicknovel.providers.NovelFullProvider
-import com.lagradost.quicknovel.providers.NovelLightProvider
-import com.lagradost.quicknovel.providers.NovelManiaProvider
-import com.lagradost.quicknovel.providers.NovelasLigerasProvider
-import com.lagradost.quicknovel.providers.NovelsOnlineProvider
-import com.lagradost.quicknovel.providers.PawReadProver
-import com.lagradost.quicknovel.providers.PlanetaEpubProvider
-import com.lagradost.quicknovel.providers.RanobesProvider
-import com.lagradost.quicknovel.providers.ReadNovelFullProvider
-import com.lagradost.quicknovel.providers.ReadOnlineFreeBookProvider
-import com.lagradost.quicknovel.providers.ReadfromnetProvider
-import com.lagradost.quicknovel.providers.ReadhiveProvider
-import com.lagradost.quicknovel.providers.RedditProvider
-import com.lagradost.quicknovel.providers.RewayatProvider
-import com.lagradost.quicknovel.providers.RoyalRoadProvider
-import com.lagradost.quicknovel.providers.SakuraNovelProvider
-import com.lagradost.quicknovel.providers.ScribblehubProvider
-import com.lagradost.quicknovel.providers.SkyNovelsProvider
-import com.lagradost.quicknovel.providers.SonicMTLProvider
-import com.lagradost.quicknovel.providers.VynovelProvider
-import com.lagradost.quicknovel.providers.WattpadProvider
-import com.lagradost.quicknovel.providers.WtrLabProvider
-import com.lagradost.quicknovel.providers.WuxiaBoxProvider
-import com.lagradost.quicknovel.providers.WuxiaClickProvider
 import com.lagradost.quicknovel.util.Coroutines.ioSafe
 
 class Apis {
     companion object {
         val apis: List<MainAPI> = arrayOf(
-            //AllProvider(),
             AhorramasProvider(),
-            AllNovelProvider(),
-            AnnasArchive(),
-            //AzynovelProvider(), // dont exist anymore
-            //BestLightNovelProvider(), //dont exist anymore
-            ChrysanthemumGardenProvider(),
-            //ComrademaoProvider(), // domain sold/down?
-            DevilNovelsProvider(),
-            //EfremnetProvider(), // domain is expired
-            //EngNovelProvider(),
-            FanMtlnProvider(),
-            FenrirRealProvider(),
-            FreewebnovelProvider(),
-            GraycityProvider(),
-            HiraethTranslationProvider(),
-            IndoWebNovelProvider(),
-            KolNovelProvider(),
-            LibReadProvider(),
-            //LightNovelPubProvider(), // Got cloudflare, but probably bypassable
-            LightNovelTranslationsProvider(),
-            LightNovelWorldProvider(),
-            LnoriProvider(),
-            LnMTLProvider(),
-            MeioNovelProvider(),
             MercadonaProvider(),
-            //MNovelFreeProvider(), // same as NovelFullVipProvider
-            MoreNovelProvider(),
-            MtlNovelProvider(),
-            NoBadNovelProvider(),
-            NovelasLigerasProvider(),
-            NovelBinProvider(),
-            NovelBuddyProvider(),
-            NovelFireProvider(),
-            NovelFullNETProvider(),
-            NovelFullProvider(),
-            NovelLightProvider(),
-            NovelManiaProvider(),
-            //NovelPassionProvider(), // Site gone
-            NovelsOnlineProvider(),
-            NovLoveProvider(),
-            PawReadProver(),
-            PlanetaEpubProvider(),
-            RanobesProvider(),
-            //RanobesProvider(),
-            //ReadAnyBookProvider(), // Books locked behind login
-            ReadfromnetProvider(),
-            ReadhiveProvider(),
-            //ReadLightNovelProvider(), // NOT WORKING?
-            ReadNovelFullProvider(),
-            ReadOnlineFreeBookProvider(),
-            RewayatProvider(),
-            RoyalRoadProvider(),
-            SakuraNovelProvider(), // cloudflare?
-            ScribblehubProvider(),
-            SkyNovelsProvider(),
-            SonicMTLProvider(),
-            VynovelProvider(),
-            WattpadProvider(),
-            WtrLabProvider(),
-            WuxiaBoxProvider(),
-            WuxiaClickProvider(),
-            //WuxiaWorldOnlineProvider(), // Site does not work
-            //WuxiaWorldSiteProvider(),
         ).sortedBy { it.name }
 
         fun getApiFromName(name: String): APIRepository {
@@ -149,7 +38,6 @@ class Apis {
                     return APIRepository(a)
                 }
             }
-            if (name == RedditProvider().name) return APIRepository(RedditProvider())
             return null
         }
 
