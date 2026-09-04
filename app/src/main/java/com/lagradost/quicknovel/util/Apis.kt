@@ -9,6 +9,7 @@ import com.lagradost.quicknovel.MainAPI
 import com.lagradost.quicknovel.R
 import com.lagradost.quicknovel.SearchResponse
 import com.lagradost.quicknovel.StreamResponse
+import com.lagradost.quicknovel.providers.AhorramasProvider
 import com.lagradost.quicknovel.providers.AllNovelProvider
 import com.lagradost.quicknovel.providers.AnnasArchive
 import com.lagradost.quicknovel.providers.DevilNovelsProvider
@@ -65,6 +66,7 @@ class Apis {
     companion object {
         val apis: List<MainAPI> = arrayOf(
             //AllProvider(),
+            AhorramasProvider(),
             AllNovelProvider(),
             AnnasArchive(),
             //AzynovelProvider(), // dont exist anymore
