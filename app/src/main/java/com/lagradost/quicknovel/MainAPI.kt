@@ -302,6 +302,11 @@ interface LoadResponse {
     var status: ReleaseStatus? // 0 = null - implemented but not found, 1 = Ongoing, 2 = Complete, 3 = Pause/HIATUS, 4 = Dropped
     var posterHeaders: Map<String, String>?
 
+    // URL de la ficha externa (por ejemplo, Open Food Facts) de la que se ha sacado
+    // información para completar este resultado, como los ingredientes de un producto
+    // de supermercado. Null si no se ha encontrado/usado ninguna fuente externa.
+    var offUrl: String?
+
     val image: UiImage? get() = img(url = posterUrl, headers = posterHeaders)
     val apiName: String
     var related: List<SearchResponse>?
@@ -332,6 +337,7 @@ data class StreamResponse(
     override var tags: List<String>? = null,
     override var status: ReleaseStatus? = null,
     override var posterHeaders: Map<String, String>? = null,
+    override var offUrl: String? = null,
     var nextChapter: ChapterData? = null,
     override var related: List<SearchResponse>? = null
 ) : LoadResponse
@@ -406,6 +412,7 @@ data class EpubResponse(
     override var tags: List<String>? = null,
     override var status: ReleaseStatus? = null,
     override var posterHeaders: Map<String, String>? = null,
+    override var offUrl: String? = null,
     var downloadLinks: List<DownloadLink>,
     var downloadExtractLinks: List<DownloadExtractLink>,
     override val apiName: String,

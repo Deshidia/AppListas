@@ -263,6 +263,21 @@ class ResultViewModel : ViewModel() {
         }
     }
 
+    /**
+     * Abre la ficha externa (por ejemplo, la del producto en Open Food Facts) de la que
+     * se ha sacado información para completar este resultado. No hace nada si el
+     * resultado actual no tiene ninguna asociada.
+     */
+    fun openOffInBrowser() = viewModelScope.launchSafe {
+        loadMutex.withLock {
+            if (!hasLoaded) return@launchSafe
+            val url = load.offUrl ?: return@launchSafe
+            val i = Intent(Intent.ACTION_VIEW)
+            i.data = url.toUri()
+            activity?.startActivity(i)
+        }
+    }
+
     fun switchTab(index: Int?, position: Int?) {
         val newPos = index ?: return
         currentTabPosition.postValue(position ?: return)

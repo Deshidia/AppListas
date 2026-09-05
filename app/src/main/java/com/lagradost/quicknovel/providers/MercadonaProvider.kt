@@ -387,11 +387,11 @@ class MercadonaProvider : MainAPI() {
             val desc = root.path("description").asText("")
 
             // La "descripción" que se muestra en la ficha pasa a ser la lista de
-            // ingredientes de Open Food Facts (ver fetchIngredientsText); si no se
-            // encuentra nada allí, se cae a la descripción propia de Mercadona.
-            val ingredients = fetchIngredientsText(root, name)
-            val descriptionBlock = if (ingredients != null) {
-                "🧾 INGREDIENTES (Open Food Facts):\n$ingredients"
+            // ingredientes de Open Food Facts (ver fetchOffData); si no se encuentra
+            // nada allí, se cae a la descripción propia de Mercadona.
+            val off = fetchOffData(root, name)
+            val descriptionBlock = if (off != null) {
+                "🧾 INGREDIENTES (Open Food Facts):\n${off.ingredientsText}"
             } else {
                 desc
             }
@@ -399,6 +399,9 @@ class MercadonaProvider : MainAPI() {
             newStreamResponse(name, url, listOf(newChapterData("Ficha del producto", url))) {
                 posterUrl = thumb
                 synopsis = "💰 PRECIO: $price €\n\n$descriptionBlock"
+                // Permite mostrar un botón "OpenFoodFacts" en la ficha que abra la
+                // página exacta de la que se han sacado los ingredientes.
+                offUrl = off?.productUrl
             }
         } catch (e: Exception) {
             logError(e)
@@ -418,7 +421,7 @@ class MercadonaProvider : MainAPI() {
      * anterior). Si no aparece en ninguna, [OpenFoodFactsApi.findIngredients] cae solo a
      * buscar por nombre + marca.
      */
-    private suspend fun fetchIngredientsText(root: JsonNode, name: String): String? {
+    private suspend fun fetchOffData(root: JsonNode, name: String): OpenFoodFactsApi.OffIngredients? {
         val eanCandidates = listOf(
             root.path("ean"),
             root.path("details").path("ean"),
@@ -431,7 +434,6 @@ class MercadonaProvider : MainAPI() {
         val brand = root.path("details").path("brand").asText("").takeIf { it.isNotEmpty() }
 
         return OpenFoodFactsApi.findIngredients(name = name, brand = brand, ean = ean)
-            ?.ingredientsText
     }
 
     override suspend fun loadHtml(url: String): String? {
@@ -451,7 +453,7 @@ class MercadonaProvider : MainAPI() {
             // Igual que en load(): se prioriza mostrar los ingredientes de Open Food
             // Facts en vez de la descripción propia de Mercadona, cayendo a esta última
             // solo si no se encuentra nada en Open Food Facts.
-            val ingredients = fetchIngredientsText(root, name)
+            val ingredients = fetchOffData(root, name)?.ingredientsText
             val descriptionTitle = if (ingredients != null) "Ingredientes (Open Food Facts)" else "Descripción"
             val descriptionBody = ingredients ?: description
 

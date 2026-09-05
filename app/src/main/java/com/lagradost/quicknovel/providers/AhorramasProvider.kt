@@ -252,9 +252,9 @@ class AhorramasProvider : MainAPI() {
             // Igual que en MercadonaProvider: se intenta sustituir la descripción propia
             // de la tienda por la lista de ingredientes de ese mismo producto en Open
             // Food Facts, cayendo a la descripción original si no se encuentra nada allí.
-            val ingredients = fetchIngredientsText(document, name)
-            val descriptionBlock = if (ingredients != null) {
-                "🧾 INGREDIENTES (Open Food Facts):\n$ingredients"
+            val off = fetchOffData(document, name)
+            val descriptionBlock = if (off != null) {
+                "🧾 INGREDIENTES (Open Food Facts):\n${off.ingredientsText}"
             } else {
                 description
             }
@@ -267,6 +267,9 @@ class AhorramasProvider : MainAPI() {
             newStreamResponse(name, url, listOf(newChapterData("Ficha del producto", url))) {
                 posterUrl = thumb
                 synopsis = synopsisParts.joinToString("\n\n")
+                // Permite mostrar un botón "OpenFoodFacts" en la ficha que abra la
+                // página exacta de la que se han sacado los ingredientes.
+                offUrl = off?.productUrl
             }
         } catch (e: Exception) {
             logError(e)
@@ -275,8 +278,8 @@ class AhorramasProvider : MainAPI() {
     }
 
     /**
-     * Busca en Open Food Facts los ingredientes de este mismo producto y devuelve solo el
-     * texto de ingredientes, o null si no se ha encontrado nada aprovechable.
+     * Busca en Open Food Facts los ingredientes de este mismo producto, o null si no se ha
+     * encontrado nada aprovechable.
      *
      * A diferencia de Mercadona, Ahorramas no expone el código de barras (EAN) en ningún
      * endpoint JSON propio; se intenta sacarlo de forma heurística del bloque de datos
@@ -285,11 +288,10 @@ class AhorramasProvider : MainAPI() {
      * [OpenFoodFactsApi.findIngredients] busque por nombre + marca (esta última, si se
      * encuentra, entre las filas de atributos de la ficha).
      */
-    private suspend fun fetchIngredientsText(document: Document, name: String): String? {
+    private suspend fun fetchOffData(document: Document, name: String): OpenFoodFactsApi.OffIngredients? {
         val ean = extractEan(document)
         val brand = extractBrand(document)
         return OpenFoodFactsApi.findIngredients(name = name, brand = brand, ean = ean)
-            ?.ingredientsText
     }
 
     private val gtinRegex = Regex(""""gtin(?:13|12|8)?"\s*:\s*"?(\d{8,14})"?""")
@@ -333,7 +335,7 @@ class AhorramasProvider : MainAPI() {
             // Igual que en load(): se prioriza mostrar los ingredientes de Open Food
             // Facts en vez de la descripción propia de la tienda, cayendo a esta última
             // solo si no se encuentra nada en Open Food Facts.
-            val ingredients = fetchIngredientsText(document, name)
+            val ingredients = fetchOffData(document, name)?.ingredientsText
             val descriptionTitle = if (ingredients != null) "Ingredientes (Open Food Facts)" else "Descripción"
             val descriptionBody = ingredients ?: description
 

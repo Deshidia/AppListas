@@ -372,6 +372,14 @@
                                     android:text="@string/result_share"
                                     app:drawableBottomCompat="@drawable/ic_outline_share_24" />
 
+                                <TextView
+                                    android:id="@+id/result_openfoodfacts"
+                                    style="@style/TextButton"
+                                    android:contentDescription="@string/open_food_facts"
+                                    android:text="@string/open_food_facts"
+                                    android:visibility="gone"
+                                    app:drawableBottomCompat="@drawable/ic_baseline_list_24" />
+
                                 <!--
                                 <com.google.android.material.button.MaterialButton
                                     android:id="@+id/result_bookmark"

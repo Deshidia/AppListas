@@ -28,14 +28,23 @@ import org.jsoup.nodes.Element
  * "categories/frescos/carne/OC13"), porque los productos se sacan haciendo scraping de esa
  * misma página.
  *
- * OJO: al recopilar el árbol, la web empezó a devolver bloqueos intermitentes de tipo
- * "robots disallowed" (parece un límite de peticiones más que un robots.txt real, porque
- * afectaba a categorías concretas de forma inconsistente). Por eso unas ~15 categorías
- * grandes (Desayuno y Merienda, Congelados, Droguería, Tecnología, Juguetes, Papelería,
- * Textil...) se han dejado con una única "categoría pequeña" que es la propia categoría
- * grande, en vez de con su desglose real: el proveedor funciona igual (se listan sus
- * productos), solo que sin la subdivisión fina. Se pueden completar más adelante repitiendo
- * el mismo proceso con esas categorías cuando la web dé una tregua.
+ * IMPORTANTE (categorías que salían vacías): en Alcampo, la página de una categoría GRANDE
+ * (p.ej. "Droguería" u origialmente "Frescos") normalmente NO lista productos propios, solo
+ * tarjetas hacia sus categorías pequeñas; los productos solo aparecen en la página de la
+ * categoría pequeña. Por eso el "id" de cada entrada del selector de categorías grandes
+ * (mainCategories) apunta a esa categoría grande solo para mostrar el nombre, pero
+ * loadMainPage() SIEMPRE pide productos a través de categorySubCategories, es decir, a las
+ * categorías pequeñas de dentro. De las 28 categorías grandes, 13 tienen ya su desglose real
+ * comprobado contra la web (Frescos, Leche/Huevos/Lácteos, Alimentación, Bebidas,
+ * Electrodomésticos, Hogar y Decoración, Mascotas, Droguería, Desayuno y Merienda,
+ * Congelados, Comida Preparada, Supermercado Ecológico, Veganos). Las ~15 restantes (Sin
+ * Gluten/Sin Lactosa, Perfumeria, Bebé, Parafarmacia, Tecnología, Jardín y terraza, Juguetes,
+ * Papelería, Bricolaje, Automóvil, Libros, Deportes y Maletas, Textil, Campañas, Folletos y
+ * Promociones) se han dejado con una única "categoría pequeña" que es la propia categoría
+ * grande (por bloqueos intermitentes tipo "robots disallowed" de la web al recopilar el
+ * árbol, más que un robots.txt real, ya que afectaba a categorías concretas de forma
+ * inconsistente); para esas ~15, es esperable ver la sección vacía o con muy pocos
+ * productos hasta que se complete su desglose repitiendo el mismo proceso.
  *
  * El parseo de cada ficha de producto tampoco depende de nombres de clase CSS concretos:
  * se localizan los enlaces "a[href*=/products/]" (cada producto aparece dos veces, una
@@ -45,6 +54,15 @@ import org.jsoup.nodes.Element
  * cuyo texto ya incluya tanto un precio en euros como el botón "Añadir"). El precio
  * mostrado en la ficha (no el precio por litro/kilo, que aparece antes) es siempre el
  * último importe en euros encontrado justo antes de ese botón.
+ *
+ * IMPORTANTE (miniaturas que no cargaban en el listado): comprobado contra el HTML real, el
+ * listado de categoría de Alcampo casi nunca trae una URL de imagen aprovechable en la carga
+ * inicial (las miniaturas se completan más tarde vía JavaScript); en cambio, la ficha
+ * individual de cada producto SÍ trae siempre una imagen real en la meta "og:image". Por eso
+ * en el listado (parseProductTiles/extractThumb) es normal que muchos productos se queden sin
+ * miniatura pese a probar varias señales de carga diferida (data-src, srcset,
+ * background-image), mientras que al abrir la ficha del producto (load()/loadHtml()) la
+ * imagen sí se resuelve siempre desde "og:image".
  *
  * No se ha podido verificar con certeza la URL exacta del buscador interno de Alcampo (no
  * es indexable ni aparece en el HTML server-renderizado de la portada), así que search() usa
@@ -125,19 +143,62 @@ class AlcampoProvider : MainAPI() {
 
         // Sin desglosar por bloqueos de la web durante la recopilación (ver cabecera).
         "--- DESAYUNO Y MERIENDA ---" to "categories/desayuno-y-merienda/OC10",
-        "Desayuno y Merienda" to "categories/desayuno-y-merienda/OC10",
+        "Turrones" to "categories/desayuno-y-merienda/turrones/OCTURRONES",
+        "Cafés" to "categories/desayuno-y-merienda/cafés/OC100806",
+        "Galletas" to "categories/desayuno-y-merienda/galletas/OC100805",
+        "Chocolates, Cremas untar y Bombones" to "categories/desayuno-y-merienda/chocolates-cremas-untar-y-bombones/OC1008",
+        "Bollería y Pastelería" to "categories/desayuno-y-merienda/bollería-y-pastelería/OC1011",
+        "Cereales y Barritas" to "categories/desayuno-y-merienda/cereales-y-barritas/OC100804",
+        "Cacaos solubles" to "categories/desayuno-y-merienda/cacaos-solubles/OC100803017",
+        "Azúcar, miel y otros edulcorantes" to "categories/desayuno-y-merienda/azúcar-miel-y-otros-edulcorantes/OCAzucaryedulcorante",
+        "Té e Infusiones" to "categories/desayuno-y-merienda/té-e-infusiones/OC100807",
+        "Mermelada, almibares, membrillo" to "categories/desayuno-y-merienda/mermelada-almibares-membrillo/OC100802",
+        "Golosinas" to "categories/desayuno-y-merienda/golosinas/OC100902",
+        "Preparación Postres" to "categories/desayuno-y-merienda/preparación-postres/OC1007",
 
         // Sin desglosar por bloqueos de la web durante la recopilación (ver cabecera).
         "--- CONGELADOS ---" to "categories/congelados/OC200220183",
-        "Congelados" to "categories/congelados/OC200220183",
+        "Pescados, mariscos y surimis" to "categories/congelados/pescados-mariscos-y-surimis/OC1201",
+        "Helados" to "categories/congelados/helados/OC200220184",
+        "Verduras Congeladas" to "categories/congelados/verduras-congeladas/OC1203",
+        "Platos preparados congelados" to "categories/congelados/platos-preparados-congelados/OC1205",
+        "Patatas, croquetas y empanadillas" to "categories/congelados/patatas-croquetas-y-empanadillas/OCCroquetasEmpanadillas",
+        "San jacobos, nuggets y pollo empanado" to "categories/congelados/san-jacobos-nuggets-y-pollo-empanado/OCPolloEmpanado",
+        "Carne" to "categories/congelados/carne/OC1202",
+        "Repostería, hielo y bolsas isotérmicas" to "categories/congelados/repostería-hielo-y-bolsas-isotérmicas/OC1207",
+        "Tartas, postres y fruta congelada" to "categories/congelados/tartas-postres-y-fruta-congelada/OC1209",
+        "Esenciales para tu freidora de aire" to "categories/congelados/esenciales-para-tu-freidora-de-aire/OCconfreiaire",
 
         // Sin desglosar por bloqueos de la web durante la recopilación (ver cabecera).
         "--- COMIDA PREPARADA ---" to "categories/comida-preparada/OC20022018",
-        "Comida Preparada" to "categories/comida-preparada/OC20022018",
+        "Sushi" to "categories/comida-preparada/sushi/OC140502",
+        "Pizzas" to "categories/comida-preparada/pizzas/OC941",
+        "Gazpachos, salmorejos y cremas" to "categories/comida-preparada/gazpachos-salmorejos-y-cremas/OC943",
+        "Tortillas de patata" to "categories/comida-preparada/tortillas-de-patata/OC09426",
+        "Arroces y pastas" to "categories/comida-preparada/arroces-y-pastas/OC2002201852",
+        "Otras especialidades" to "categories/comida-preparada/otras-especialidades/OC09427",
+        "Hummus, guacamole y otros" to "categories/comida-preparada/hummus-guacamole-y-otros/OC090820181",
+        "Platos Internacionales" to "categories/comida-preparada/platos-internacionales/OC09421",
+        "Masas y bases" to "categories/comida-preparada/masas-y-bases/OC0943",
+        "Alimentos vegetarianos" to "categories/comida-preparada/alimentos-vegetarianos/OC09441",
+        "Sándwiches, bocadillos y roscas" to "categories/comida-preparada/sándwiches-bocadillos-y-roscas/OC2002201853",
+        "Asados y carnes" to "categories/comida-preparada/asados-y-carnes/OC09423",
+        "Ensaladas refrigeradas" to "categories/comida-preparada/ensaladas-refrigeradas/OC9421",
+        "Empanadas" to "categories/comida-preparada/empanadas/OC09428",
+        "Esenciales para tu freidora de aire" to "categories/comida-preparada/esenciales-para-tu-freidora-de-aire/OCcpfreiaire",
+        "Platos preparados en conserva" to "categories/comida-preparada/platos-preparados-en-conserva/OC100404B",
 
         // Sin desglosar por bloqueos de la web durante la recopilación (ver cabecera).
         "--- SUPERMERCADO ECOLÓGICO ---" to "categories/supermercado-ecológico/OC26112021",
-        "Supermercado Ecológico" to "categories/supermercado-ecológico/OC26112021",
+        "Producto Fresco Ecológico" to "categories/supermercado-ecológico/producto-fresco-ecológico/OC261120211",
+        "Lácteos y Huevos de producción ecológica" to "categories/supermercado-ecológico/lácteos-y-huevos-de-producción-ecológica/OC2611202122",
+        "Tu despensa Ecológica" to "categories/supermercado-ecológico/tu-despensa-ecológica/OC2611202121",
+        "Desayunos Ecológicos" to "categories/supermercado-ecológico/desayunos-ecológicos/OC2611202123",
+        "Bebidas Ecológicas" to "categories/supermercado-ecológico/bebidas-ecológicas/OC261120213",
+        "Alimentación infantil ecológica" to "categories/supermercado-ecológico/alimentación-infantil-ecológica/OC200520206",
+        "Perfumería Ecológica" to "categories/supermercado-ecológico/perfumería-ecológica/OC261120216",
+        "Comercio Justo" to "categories/supermercado-ecológico/comercio-justo/OC01062020",
+        "Droguería Ecológica y sostenible" to "categories/supermercado-ecológico/droguería-ecológica-y-sostenible/OC117020418",
 
         "--- BEBIDAS ---" to "categories/bebidas/OCC11",
         "Refrescos" to "categories/bebidas/refrescos/OC1103",
@@ -161,11 +222,25 @@ class AlcampoProvider : MainAPI() {
 
         // Sin desglosar por bloqueos de la web durante la recopilación (ver cabecera).
         "--- VEGANOS ---" to "categories/veganos/OC09112021",
-        "Veganos" to "categories/veganos/OC09112021",
+        "Bebidas veganas" to "categories/veganos/bebidas-veganas/OC091120212",
+        "Vino Vegano" to "categories/veganos/vino-vegano/OC0911202126",
+        "Proteina vegana" to "categories/veganos/proteina-vegana/OC091120211",
+        "Alimentación vegana" to "categories/veganos/alimentación-vegana/OC091120215",
 
         // Sin desglosar por bloqueos de la web durante la recopilación (ver cabecera).
         "--- DROGUERÍA ---" to "categories/droguería/OCC14",
-        "Droguería" to "categories/droguería/OCC14",
+        "Celulosas" to "categories/droguería/celulosas/OC2101",
+        "Lavado de Ropa" to "categories/droguería/lavado-de-ropa/OC2104",
+        "Lavavajillas" to "categories/droguería/lavavajillas/OC2106",
+        "Limpieza Hogar" to "categories/droguería/limpieza-hogar/OC2108",
+        "Utensilios Limpieza" to "categories/droguería/utensilios-limpieza/OC2109",
+        "Ambientadores" to "categories/droguería/ambientadores/OC2110",
+        "Conservación de Alimentos y Moldes" to "categories/droguería/conservación-de-alimentos-y-moldes/OC2102",
+        "Antimosquitos" to "categories/droguería/antimosquitos/OCANT",
+        "Insecticidas" to "categories/droguería/insecticidas/OC2111",
+        "Limpieza Calzado" to "categories/droguería/limpieza-calzado/OC2105",
+        "Lejías y Amoníacos" to "categories/droguería/lejías-y-amoníacos/OC2107",
+        "Droguería Ecológica y sostenible" to "categories/droguería/droguería-ecológica-y-sostenible/OC117020418BB",
 
         // Sin desglosar por bloqueos de la web durante la recopilación (ver cabecera).
         "--- PERFUMERIA ---" to "categories/perfumeria/OC70",
@@ -528,10 +603,6 @@ class AlcampoProvider : MainAPI() {
             ?: link.text().trim().takeIf { it.isNotEmpty() }
             ?: return null
 
-        val thumb = img?.attr("abs:src")?.takeIf { it.isNotEmpty() }
-            ?: img?.attr("abs:data-src")?.takeIf { it.isNotEmpty() }
-            ?: ""
-
         // La ficha de Alcampo no tiene un contenedor con clase fija por producto (o al menos
         // no una que se pueda dar por estable), así que se sube por el árbol del DOM desde el
         // propio enlace hasta encontrar el primer antecesor cuyo texto ya incluya un precio en
@@ -540,12 +611,48 @@ class AlcampoProvider : MainAPI() {
         // está en su propio contenedor y el precio/botón de un producto siempre son
         // descendientes de ese mismo contenedor.
         val card = climbToCard(link) ?: link
+        val thumb = extractThumb(card)
         val price = lastPrice(card.text())
 
         return newSearchResponse(name, href, fix = false) {
             posterUrl = thumb
             if (price != null) this.price = "$price €"
         }
+    }
+
+    // En las pruebas hechas contra la web real, el listado de categoría de Alcampo no
+    // siempre trae la miniatura en el "src" del <img> desde la primera carga (a veces solo
+    // se completa al hacer scroll, vía JavaScript, y el scraping no ve eso). Por eso se busca
+    // en TODA la ficha (no solo en el enlace concreto que dio el nombre) y se prueban, por
+    // orden, los sitios habituales donde una imagen con carga diferida guarda la URL real:
+    // atributos "data-*", "srcset", y como último recurso un "background-image" en CSS
+    // inline. Puede seguir devolviendo cadena vacía si el HTML inicial de verdad no trae
+    // ninguna imagen aprovechable para ese producto.
+    private val backgroundImageRegex = Regex("""background-image:\s*url\(['"]?([^'"()]+)['"]?\)""")
+
+    private fun extractThumb(card: Element): String {
+        card.select("img").forEach { img ->
+            listOf("abs:src", "abs:data-src", "abs:data-lazy-src", "abs:data-original").forEach { attr ->
+                val value = img.attr(attr)
+                if (value.isNotEmpty() && !value.startsWith("data:")) return value
+            }
+            firstSrcsetUrl(img.attr("srcset"))?.let { return it }
+        }
+        card.select("source[srcset]").forEach { source ->
+            firstSrcsetUrl(source.attr("srcset"))?.let { return it }
+        }
+        card.select("[style*=\"background-image\"]").forEach { el ->
+            backgroundImageRegex.find(el.attr("style"))?.groupValues?.get(1)?.let {
+                return if (it.startsWith("http")) it else fixUrl(it)
+            }
+        }
+        return ""
+    }
+
+    private fun firstSrcsetUrl(srcset: String): String? {
+        val url = srcset.split(",").firstOrNull()?.trim()?.split(" ")?.firstOrNull()
+            ?.takeIf { it.isNotEmpty() } ?: return null
+        return if (url.startsWith("http")) url else fixUrl(url)
     }
 
     private fun climbToCard(start: Element): Element? {

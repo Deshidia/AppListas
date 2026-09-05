@@ -192,6 +192,11 @@ class ResultFragment : BaseFragment<FragmentResultBinding>(
                         res.views?.let { views -> humanReadableByteCountSI(views) }
                             ?: getString(R.string.no_data)
 
+                    // Solo se muestra si este resultado tiene una ficha externa asociada
+                    // (por ejemplo, la de Open Food Facts de la que se sacaron los
+                    // ingredientes de un producto de supermercado).
+                    resultOpenfoodfacts.isVisible = res.offUrl != null
+
                     resultBack.setColorFilter(Color.WHITE)
                     resultTabs.removeAllTabs()
                     resultTabs.isVisible = false
@@ -402,6 +407,10 @@ class ResultFragment : BaseFragment<FragmentResultBinding>(
 
             resultShare.setOnClickListener {
                 viewModel.share()
+            }
+
+            resultOpenfoodfacts.setOnClickListener {
+                viewModel.openOffInBrowser()
             }
 
             val reviewAdapter = ReviewAdapter()

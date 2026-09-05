@@ -79,6 +79,7 @@
     <string name="stop">Detener</string>
     <string name="result_share">Compartir</string>
     <string name="open_in_browser">Navegar</string>
+    <string name="open_food_facts">OpenFoodFacts</string>
     <string name="history_more_options">Más opciones</string>
     <string name="clear_history">Borrar historial</string>
     <string name="remove_history">Eliminar historial</string>

@@ -6,7 +6,7 @@ import com.lagradost.quicknovel.mvvm.logError
 
 /**
  * Cliente mínimo para la API pública y gratuita de Open Food Facts
- * (https://world.openfoodfacts.org), usado por los proveedores de supermercado
+ * (https://es.openfoodfacts.org), usado por los proveedores de supermercado
  * (Mercadona, Ahorramas...) para completar la ficha de un producto con su lista real de
  * ingredientes, tal y como la tiene registrada Open Food Facts para ese mismo producto.
  *
@@ -17,7 +17,7 @@ import com.lagradost.quicknovel.mvvm.logError
  * Ver: https://openfoodfacts.github.io/openfoodfacts-server/api/
  */
 object OpenFoodFactsApi {
-    private const val BASE_URL = "https://world.openfoodfacts.org"
+    private const val BASE_URL = "https://es.openfoodfacts.org"
 
     private val headers = mapOf(
         "User-Agent" to "AppListas/1.0 (Android) - https://github.com/Deshidia/AppListas"
@@ -29,6 +29,9 @@ object OpenFoodFactsApi {
 
     data class OffIngredients(
         val ingredientsText: String,
+        // Ficha en openfoodfacts.org de la que se ha sacado la información, para poder
+        // enlazarla desde la app (botón "OpenFoodFacts" en la ficha del producto).
+        val productUrl: String?,
         val productName: String?,
         val brands: String?
     )
@@ -119,8 +122,14 @@ object OpenFoodFactsApi {
             ?: path("ingredients_text").asText("").trim().takeIf { it.isNotEmpty() }
             ?: return null
 
+        // La URL canónica "/product/{code}" siempre funciona y redirige sola a la
+        // versión localizada/con slug (p.ej. "es.openfoodfacts.org/producto/.../nombre"),
+        // así que no hace falta reconstruir esa parte a mano.
+        val code = path("code").asText("").trim().takeIf { it.isNotEmpty() }
+
         return OffIngredients(
             ingredientsText = text,
+            productUrl = code?.let { "$BASE_URL/product/$it" },
             productName = path("product_name").asText("").takeIf { it.isNotEmpty() },
             brands = path("brands").asText("").takeIf { it.isNotEmpty() }
         )
