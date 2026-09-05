@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.JsonNode
 import com.lagradost.quicknovel.*
 import com.lagradost.quicknovel.MainActivity.Companion.app
 import com.lagradost.quicknovel.mvvm.logError
+import com.lagradost.quicknovel.util.OpenFoodFactsApi
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
@@ -385,14 +386,52 @@ class MercadonaProvider : MainAPI() {
             val price = root.path("price_instructions").path("unit_price").asText("N/A")
             val desc = root.path("description").asText("")
 
+            // La "descripción" que se muestra en la ficha pasa a ser la lista de
+            // ingredientes de Open Food Facts (ver fetchIngredientsText); si no se
+            // encuentra nada allí, se cae a la descripción propia de Mercadona.
+            val ingredients = fetchIngredientsText(root, name)
+            val descriptionBlock = if (ingredients != null) {
+                "🧾 INGREDIENTES (Open Food Facts):\n$ingredients"
+            } else {
+                desc
+            }
+
             newStreamResponse(name, url, listOf(newChapterData("Ficha del producto", url))) {
                 posterUrl = thumb
-                synopsis = "💰 PRECIO: $price €\n\n$desc"
+                synopsis = "💰 PRECIO: $price €\n\n$descriptionBlock"
             }
         } catch (e: Exception) {
             logError(e)
             null
         }
+    }
+
+    /**
+     * Busca en Open Food Facts los ingredientes de este mismo producto y devuelve solo el
+     * texto de ingredientes (sin formatear), o null si no se ha encontrado nada
+     * aprovechable (para poder caer a la descripción propia de Mercadona en ese caso).
+     *
+     * El código de barras (EAN) es, con diferencia, la forma más fiable de acertar con la
+     * misma ficha exacta en Open Food Facts (mismo tamaño/variante); pero como no está
+     * garantizado en qué parte del JSON de Mercadona viene según el producto, se prueban
+     * varias rutas candidatas (mismo patrón que ya se usa más abajo con el precio
+     * anterior). Si no aparece en ninguna, [OpenFoodFactsApi.findIngredients] cae solo a
+     * buscar por nombre + marca.
+     */
+    private suspend fun fetchIngredientsText(root: JsonNode, name: String): String? {
+        val eanCandidates = listOf(
+            root.path("ean"),
+            root.path("details").path("ean"),
+            root.path("product_information").path("ean"),
+        )
+        val ean = eanCandidates
+            .firstOrNull { !it.isMissingNode && !it.isNull && it.asText("").isNotEmpty() }
+            ?.asText("")
+
+        val brand = root.path("details").path("brand").asText("").takeIf { it.isNotEmpty() }
+
+        return OpenFoodFactsApi.findIngredients(name = name, brand = brand, ean = ean)
+            ?.ingredientsText
     }
 
     override suspend fun loadHtml(url: String): String? {
@@ -409,6 +448,13 @@ class MercadonaProvider : MainAPI() {
             val description = root.path("description").asText("")
             val brand = root.path("details").path("brand").asText("")
 
+            // Igual que en load(): se prioriza mostrar los ingredientes de Open Food
+            // Facts en vez de la descripción propia de Mercadona, cayendo a esta última
+            // solo si no se encuentra nada en Open Food Facts.
+            val ingredients = fetchIngredientsText(root, name)
+            val descriptionTitle = if (ingredients != null) "Ingredientes (Open Food Facts)" else "Descripción"
+            val descriptionBody = ingredients ?: description
+
             """
             <div style="text-align: center; font-family: sans-serif; padding: 20px; background-color: #fff;">
                 <img src="$image" style="width: 100%; max-width: 400px; border-radius: 15px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);" />
@@ -418,8 +464,8 @@ class MercadonaProvider : MainAPI() {
                 </div>
                 ${if (brand.isNotEmpty()) "<p style=\"color: #666; font-size: 18px;\"><b>Marca:</b> $brand</p>" else ""}
                 <div style="text-align: left; margin-top: 30px; border-top: 2px solid #eee; padding-top: 25px;">
-                    <h3 style="color: #333; font-size: 20px; border-bottom: 1px solid #008448; display: inline-block; padding-bottom: 5px;">Descripción</h3>
-                    <p style="line-height: 1.6; color: #444; font-size: 16px; margin-top: 15px;">$description</p>
+                    <h3 style="color: #333; font-size: 20px; border-bottom: 1px solid #008448; display: inline-block; padding-bottom: 5px;">$descriptionTitle</h3>
+                    <p style="line-height: 1.6; color: #444; font-size: 16px; margin-top: 15px; white-space: pre-line;">$descriptionBody</p>
                 </div>
             </div>
             """.trimIndent()

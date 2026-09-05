@@ -222,7 +222,7 @@ data class SearchResponse(
             val previous = originalPrice?.trim()
             if (previous.isNullOrBlank()) return current
 
-            // Añadimos un pequeño margen al tachado (un espacio a cada lado) para que no 
+            // Añadimos un pequeño margen al tachado (un espacio a cada lado) para que no
             // quede pegado al número, y un espacio extra de separación con el precio actual.
             val strikeContent = " $previous "
             val full = "$strikeContent $current"

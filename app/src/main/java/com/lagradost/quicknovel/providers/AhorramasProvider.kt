@@ -3,6 +3,7 @@ package com.lagradost.quicknovel.providers
 import com.lagradost.quicknovel.*
 import com.lagradost.quicknovel.MainActivity.Companion.app
 import com.lagradost.quicknovel.mvvm.logError
+import com.lagradost.quicknovel.util.OpenFoodFactsApi
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
@@ -248,9 +249,19 @@ class AhorramasProvider : MainAPI() {
                 .mapNotNull { it.text().trim().takeIf { t -> t.isNotEmpty() } }
                 .distinct()
 
+            // Igual que en MercadonaProvider: se intenta sustituir la descripción propia
+            // de la tienda por la lista de ingredientes de ese mismo producto en Open
+            // Food Facts, cayendo a la descripción original si no se encuentra nada allí.
+            val ingredients = fetchIngredientsText(document, name)
+            val descriptionBlock = if (ingredients != null) {
+                "🧾 INGREDIENTES (Open Food Facts):\n$ingredients"
+            } else {
+                description
+            }
+
             val synopsisParts = mutableListOf<String>()
             if (current != null) synopsisParts.add("💰 PRECIO: $current €")
-            if (description.isNotEmpty()) synopsisParts.add(description)
+            if (descriptionBlock.isNotEmpty()) synopsisParts.add(descriptionBlock)
             if (infoRows.isNotEmpty()) synopsisParts.add(infoRows.joinToString("\n"))
 
             newStreamResponse(name, url, listOf(newChapterData("Ficha del producto", url))) {
@@ -261,6 +272,48 @@ class AhorramasProvider : MainAPI() {
             logError(e)
             null
         }
+    }
+
+    /**
+     * Busca en Open Food Facts los ingredientes de este mismo producto y devuelve solo el
+     * texto de ingredientes, o null si no se ha encontrado nada aprovechable.
+     *
+     * A diferencia de Mercadona, Ahorramas no expone el código de barras (EAN) en ningún
+     * endpoint JSON propio; se intenta sacarlo de forma heurística del bloque de datos
+     * estructurados schema.org/Product (JSON-LD) que suelen incluir las tiendas
+     * Salesforce Commerce Cloud, y si no aparece ahí se cae directamente a que
+     * [OpenFoodFactsApi.findIngredients] busque por nombre + marca (esta última, si se
+     * encuentra, entre las filas de atributos de la ficha).
+     */
+    private suspend fun fetchIngredientsText(document: Document, name: String): String? {
+        val ean = extractEan(document)
+        val brand = extractBrand(document)
+        return OpenFoodFactsApi.findIngredients(name = name, brand = brand, ean = ean)
+            ?.ingredientsText
+    }
+
+    private val gtinRegex = Regex(""""gtin(?:13|12|8)?"\s*:\s*"?(\d{8,14})"?""")
+
+    private fun extractEan(document: Document): String? {
+        document.select("script[type=application/ld+json]").forEach { script ->
+            gtinRegex.find(script.data())?.groupValues?.get(1)?.let { return it }
+        }
+        return document.selectFirst(
+            "meta[itemprop=gtin13], meta[itemprop=gtin], meta[property=product:ean]"
+        )?.attr("content")?.trim()?.takeIf { it.isNotEmpty() }
+    }
+
+    private fun extractBrand(document: Document): String? {
+        document.selectFirst("meta[itemprop=brand], meta[property=product:brand]")
+            ?.attr("content")?.trim()?.takeIf { it.isNotEmpty() }
+            ?.let { return it }
+
+        return document.select("#collapseInfo li, .product-attributes li, .attribute")
+            .map { it.text().trim() }
+            .firstOrNull { it.contains("marca", ignoreCase = true) }
+            ?.substringAfter(":")
+            ?.trim()
+            ?.takeIf { it.isNotEmpty() }
     }
 
     override suspend fun loadHtml(url: String): String? {
@@ -277,6 +330,13 @@ class AhorramasProvider : MainAPI() {
             val (current, _) = extractPrices(priceScope)
             val price = current ?: "N/A"
 
+            // Igual que en load(): se prioriza mostrar los ingredientes de Open Food
+            // Facts en vez de la descripción propia de la tienda, cayendo a esta última
+            // solo si no se encuentra nada en Open Food Facts.
+            val ingredients = fetchIngredientsText(document, name)
+            val descriptionTitle = if (ingredients != null) "Ingredientes (Open Food Facts)" else "Descripción"
+            val descriptionBody = ingredients ?: description
+
             """
             <div style="text-align: center; font-family: sans-serif; padding: 20px; background-color: #fff;">
                 <img src="$image" style="width: 100%; max-width: 400px; border-radius: 15px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);" />
@@ -285,8 +345,8 @@ class AhorramasProvider : MainAPI() {
                     $price €
                 </div>
                 <div style="text-align: left; margin-top: 30px; border-top: 2px solid #eee; padding-top: 25px;">
-                    <h3 style="color: #333; font-size: 20px; border-bottom: 1px solid #E30613; display: inline-block; padding-bottom: 5px;">Descripción</h3>
-                    <p style="line-height: 1.6; color: #444; font-size: 16px; margin-top: 15px;">$description</p>
+                    <h3 style="color: #333; font-size: 20px; border-bottom: 1px solid #E30613; display: inline-block; padding-bottom: 5px;">$descriptionTitle</h3>
+                    <p style="line-height: 1.6; color: #444; font-size: 16px; margin-top: 15px; white-space: pre-line;">$descriptionBody</p>
                 </div>
             </div>
             """.trimIndent()
