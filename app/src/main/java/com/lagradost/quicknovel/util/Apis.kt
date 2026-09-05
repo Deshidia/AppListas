@@ -10,6 +10,7 @@ import com.lagradost.quicknovel.R
 import com.lagradost.quicknovel.SearchResponse
 import com.lagradost.quicknovel.StreamResponse
 import com.lagradost.quicknovel.providers.AhorramasProvider
+import com.lagradost.quicknovel.providers.AlcampoProvider
 import com.lagradost.quicknovel.providers.MercadonaProvider
 import com.lagradost.quicknovel.util.Coroutines.ioSafe
 
@@ -17,6 +18,7 @@ class Apis {
     companion object {
         val apis: List<MainAPI> = arrayOf(
             AhorramasProvider(),
+            AlcampoProvider(),
             MercadonaProvider(),
         ).sortedBy { it.name }
 

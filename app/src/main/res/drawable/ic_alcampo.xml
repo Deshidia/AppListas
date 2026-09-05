@@ -1,0 +1,30 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="512"
+    android:viewportHeight="512">
+    <!-- Inner Background (White) -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M256,256m-230,0a230,230 0,1 1,460 0a230,230 0,1 1,-460 0"/>
+
+    <!-- Pink Border -->
+    <path
+        android:fillColor="#E5007E"
+        android:pathData="M256,0C114.6,0 0,114.6 0,256s114.6,256 256,256s256,-114.6 256,-256S397.4,0 256,0zM256,482c-124.8,0 -226,-101.2 -226,-226S131.2,30 256,30s226,101.2 226,226S380.8,482 256,482z"/>
+
+    <!-- Basket Handle -->
+    <path
+        android:fillColor="#E5007E"
+        android:pathData="M243,105h26v135h-26z"/>
+
+    <!-- Basket Body -->
+    <path
+        android:fillColor="#E5007E"
+        android:pathData="M105,240h302v130c0,25 -20,45 -45,45h-212c-25,0 -45,-20 -45,-45V240z"/>
+
+    <!-- White Stripe -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M105,290h302v40h-302z"/>
+</vector>
